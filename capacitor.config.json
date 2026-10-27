@@ -1,0 +1,6 @@
+{
+  "appId": "com.diusoki.app",
+  "appName": "diusoki",
+  "webDir": "www",
+  "server": { "androidScheme": "https" }
+}
