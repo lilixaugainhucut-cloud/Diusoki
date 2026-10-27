@@ -1,0 +1,72 @@
+name: Build APK diusoki
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Chuan bi thu muc www
+        run: |
+          mkdir -p www/icons
+          cp index.html www/
+          cp manifest.webmanifest sw.js www/ 2>/dev/null || true
+          cp icon-*.png www/icons/ 2>/dev/null || true
+
+      - name: Cai thu vien
+        run: npm install
+
+      - name: Tao du an Android
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Dat bieu tuong cho ung dung
+        run: |
+          R=android/app/src/main/res
+          rm -f $R/mipmap-anydpi-v26/ic_launcher.xml $R/mipmap-anydpi-v26/ic_launcher_round.xml
+          for s in "mdpi 48" "hdpi 72" "xhdpi 96" "xxhdpi 144" "xxxhdpi 192"; do
+            set -- $s
+            mkdir -p $R/mipmap-$1
+            for n in ic_launcher ic_launcher_round ic_launcher_foreground; do
+              convert logo.png -resize ${2}x${2} $R/mipmap-$1/$n.png
+            done
+          done
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Doi ten file
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk diusoki.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: diusoki-apk
+          path: diusoki.apk
+
+      - name: Dang len Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: diusoki v1.0.${{ github.run_number }}
+          files: diusoki.apk
